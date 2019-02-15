@@ -3,15 +3,20 @@ const cheerio = require('cheerio');
 
 const URL = 'https://www.daysoftheyear.com';
 
-exports.getToday = () => axios.get(URL)
-    .then(result => {
-        const $ = cheerio.load(result.data, {
-            decodeEntities: false,
-            normalizeWhitespace: true,
-        });
+exports.getToday = () => Promise.resolve({
+    title: 'Dad Jokes King\'s day',
+    href: 'https://reddit.com/r/dadjokes/',
+});
 
-        return {
-            title: $('#homepage-banner-click-target').text(),
-            href: URL + $('#homepage-banner-click-target').attr('href'),
-        }
-    });
+// exports.getToday = () => axios.get(URL)
+//     .then(result => {
+//         const $ = cheerio.load(result.data, {
+//             decodeEntities: false,
+//             normalizeWhitespace: true,
+//         });
+
+//         return {
+//             title: $('#homepage-banner-click-target').text(),
+//             href: URL + $('#homepage-banner-click-target').attr('href'),
+//         }
+//     });
