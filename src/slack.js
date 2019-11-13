@@ -5,7 +5,7 @@ const { IncomingWebhook } = require('@slack/webhook');
 const SLACK_HOOK_URL = process.env.SLACK_HOOK_URL;
 
 exports.sendPersonioEvents = (day, events) => {
-    const message = getEventsMessage(events);
+    const message = this.getEventsMessage(events, day);
     const header = `\n <!here> \n *${format(day, 'dddd Do of MMMM')}* \n`;
     const fullMessage = header + message;
 
@@ -18,9 +18,9 @@ exports.sendPersonioEvents = (day, events) => {
     sendSlackMessage(fullMessage);
 };
 
-const getEventsMessage = events => {
+exports.getEventsMessage = (events, day) => {
     if (!events.length) {
-        return "No vacations for selected date in Personio's calendar. Get back to work! :whip: \n";
+        return `No vacations for ${formatDate(day)} in Personio's calendar. Get back to work! :whip: \n`;
     }
     const eventGroups = _.groupBy(events, 'calendarId');
 

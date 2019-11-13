@@ -2,7 +2,7 @@ require('dotenv').config();
 const personio = require('./personio');
 const slack = require('./slack');
 
-const addWeeks = require('date-fns/add_weeks');
+const date = require('date-fns');
 
 const finalhandler = require('finalhandler');
 const http = require('http');
@@ -18,7 +18,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/events',  (req, res) => {
-    const nextWeek = addWeeks(new Date(), 1);
+    const nextWeek = date.addWeeks(new Date(), 1);
     fetchPersonioEventsAndPostToSlack(nextWeek);
 
     res.statusCode = 200;
@@ -32,6 +32,28 @@ app.post('/events', (req, res) => {
 
     res.status = 200;
     res.end(`Vacations for ${selectedDate} posted to Slack`);
+});
+
+app.post('/vacations', (req, res) => {
+    // currently only /vacations is a valid slash command
+    // TODO: add check if command is valid
+    const command = req.body.command;
+    const text = req.body.text;
+
+    if (!text) {
+        res.status = 400;
+        res.end('Please provide a date or day to view vacations :slightly_smiling_face:')
+    }
+
+    const matched = matchTextToDay(text);
+
+    Promise.all([personio.getEvents(matched)])
+        .then(result => {
+            const events = result[0];
+            const message = slack.getEventsMessage(events, matched);
+            res.status = 200;
+            res.end(message);
+        });
 });
 
 const server = http.createServer(function (req, res) {
@@ -59,4 +81,18 @@ const getSelectedDate = payload => {
     }
 
     return payload.actions[0].selected_date;
+};
+
+const matchTextToDay = day => {
+    const today = new Date();
+    switch (day) {
+        case "today":
+            console.log("matched today");
+            return date.addDays(today, 0);
+        case "tomorrow":
+            console.log("matched tomorrow");
+            return date.addDays(today, 1);
+        default:
+            return date.parse(day);
+    }
 };
