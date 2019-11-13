@@ -1,25 +1,26 @@
 const _ = require('lodash');
 const format = require('date-fns/format');
-const IncomingWebhook = require('@slack/client').IncomingWebhook;
+const { IncomingWebhook } = require('@slack/webhook');
 
 const SLACK_HOOK_URL = process.env.SLACK_HOOK_URL;
 
-exports.sendPersonioEvents = (day, dayOfYear, events) => {
+exports.sendPersonioEvents = (day, events) => {
     const message = getEventsMessage(events);
-    const dayOfTheYearLink = `<${dayOfYear.href}|${dayOfYear.title}>`;
-    const header = `\n${format(day, 'dddd Do of MMMM')} - ${dayOfTheYearLink}\n\n`;
+    const header = `\n <!here> \n *${format(day, 'dddd Do of MMMM')}* \n`;
     const fullMessage = header + message;
 
     console.log(fullMessage);
 
-    if (SLACK_HOOK_URL) {
-        sendSlackMessage(fullMessage);
+    if (!SLACK_HOOK_URL) {
+        console.log("No SLACK_HOOK_URL provided!");
+        return "In order to send messages to slack, please add the SLACK_HOOK_URL to your .env file"
     }
+    sendSlackMessage(fullMessage);
 };
 
 const getEventsMessage = events => {
     if (!events.length) {
-        return "Today there are no events in Personio's calendar\n";
+        return "No vacations for selected date in Personio's calendar. Get back to work! :whip: \n";
     }
     const eventGroups = _.groupBy(events, 'calendarId');
 
@@ -45,13 +46,45 @@ const formatDate = date => format(date, 'MMMM Do');
 
 const sendSlackMessage = message => {
     const webhook = new IncomingWebhook(SLACK_HOOK_URL);
-    webhook.send(message, (err, header, statusCode) => {
-        if (err) {
-            console.log('Slack Error:', err);
-        } else {
-            console.log('Received', statusCode, 'from Slack');
-        }
-    });
+    const datepickerInitial = new Date().toISOString().slice(0, 10);
+    (async () => {
+        await webhook.send({
+            text: "Hey! Here is your daily vacation reminder :beach_with_umbrella:",
+            blocks: [
+                {
+                    type: "section",
+                    text: {
+                        type: "mrkdwn",
+                        text: message
+                    },
+                    accessory: {
+                        type: "image",
+                        image_url: "https://api.slack.com/img/blocks/bkb_template_images/notifications.png",
+                        alt_text: "calendar thumbnail"
+                    }
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "Pick a date to see who is on vacation"
+                    },
+                    "accessory": {
+                        "type": "datepicker",
+                        "initial_date": datepickerInitial,
+                        "placeholder": {
+                            "type": "plain_text",
+                            "text": "Select a date",
+                            "emoji": true
+                        }
+                    }
+                },
+            ]
+        })
+    })();
 };
 
 const getEventTypeMessage = calendarId => process.env[`PERSONIO_MESSAGE_${calendarId}`];
